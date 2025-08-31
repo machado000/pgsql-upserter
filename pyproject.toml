@@ -4,8 +4,8 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "pgsql-upserter"
-version = "0.9.0"
-description = "PostgreSQL upsert engine using temp tables and automatic conflict resolution for high-performance ETL"
+version = "0.9.1"
+description = "PostgreSQL upsert engine using temp tables and automatic conflict resolution"
 authors = [
     {name = "Joao Brito"}
 ]
@@ -24,7 +24,7 @@ classifiers = [
 ]
 requires-python = ">=3.11"
 dependencies = [
-    "psycopg2>=2.9.0",
+    "psycopg2-binary>=2.9.0",
     "python-dotenv>=1.0.0",
 ]
 
