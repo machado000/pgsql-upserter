@@ -185,7 +185,7 @@ def execute_upsert_workflow(
             columns_to_update,
             schema,
         )
-        logger.info(f"Upsert complete: {inserted_count} inserted, {updated_count} updated")
+        logger.info(f"Upsert complete: {inserted_count} inserted, {updated_count} updated\n")
 
         # Step 8: Create final result
         result = UpsertResult(
@@ -207,7 +207,7 @@ def execute_upsert_workflow(
                 with connection.cursor() as cursor:
                     cursor.execute(f"DROP TABLE IF EXISTS {temp_table_name}")
                     connection.commit()
-                logger.info(f"Cleaned up temp table: {temp_table_name}")
+                logger.debug(f"Cleaned up temp table: {temp_table_name}")
             except Exception as e:
                 logger.warning(f"Failed to clean up temp table {temp_table_name}: {e}")
 

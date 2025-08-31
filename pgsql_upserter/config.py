@@ -44,7 +44,7 @@ def create_connection_from_env():
             raise ConnectionError(
                 "Missing required environment variables: PGDATABASE, PGUSER, PGPASSWORD")
 
-        logger.info(
+        logger.debug(
             f"Connecting to PostgreSQL: {connection_params['user']}@{connection_params['host']}:{connection_params['port']}/{connection_params['database']}")  # noqa
 
         connection = psycopg2.connect(**connection_params)
@@ -102,5 +102,5 @@ def test_connection():
     connection = create_connection_from_env()
     validate_permissions(connection)
 
-    logger.info("Database connection and permissions validated successfully")
+    logger.debug("Database connection and permissions validated successfully")
     return connection

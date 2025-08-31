@@ -70,11 +70,11 @@ def match_columns(
             matched_columns.append(col)
         else:
             missing_columns.append(col)
-            logger.warning(
+            logger.debug(
                 f"Column '{col}' does not exist in table '{table_schema.schema_name}.{table_schema.table_name}'")
 
-    logger.info(f"Column matching results: {len(matched_columns)} matched, "
-                f"{len(ignored_columns)} ignored, {len(missing_columns)} missing")
+    logger.debug(f"Column matching results: {len(matched_columns)} matched, "
+                 f"{len(ignored_columns)} ignored, {len(missing_columns)} missing")
 
     return {
         'matched_columns': matched_columns,

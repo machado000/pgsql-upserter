@@ -81,7 +81,7 @@ def create_temp_table(connection, target_table: str, schema: str = 'public') -> 
 
             connection.commit()
 
-            logger.info(
+            logger.debug(
                 f"Created temporary table '{temp_table_name}' based on '{schema}.{target_table}', dropped {len(columns_to_drop)} auto-generated columns")  # noqa
             return temp_table_name
 
@@ -157,9 +157,9 @@ def bulk_insert_to_temp(
             connection.commit()
 
             if show_progress:
-                logger.info(f"Successfully inserted {rows_inserted} rows into temporary table")
+                logger.info(f"Successfully inserted {rows_inserted} batched rows")
 
-            logger.info(f"Inserted {rows_inserted} rows into temporary table '{temp_table_name}'")
+            logger.info(f"Inserted {rows_inserted} total rows into temporary table '{temp_table_name}'")
             return rows_inserted
 
     except psycopg2.Error as e:

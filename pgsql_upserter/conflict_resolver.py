@@ -50,8 +50,8 @@ def find_conflict_strategy(
     Raises:
         PgsqlUpserterError: If no valid strategy can be determined
     """
-    logger.info(f"Analyzing conflict strategy for table '{table_schema.table_name}' "
-                f"with {len(matched_columns)} available columns")
+    logger.debug(f"Analyzing conflict strategy for table '{table_schema.table_name}' "
+                 f"with {len(matched_columns)} available columns")
 
     # Convert matched_columns to set for faster lookup
     available_columns = set(matched_columns)
@@ -68,7 +68,7 @@ def find_conflict_strategy(
                 columns=pk_columns,
                 description=f"Primary key conflict resolution on: {pk_columns}"
             )
-            logger.info(f"Using PRIMARY_KEY strategy: {strategy.description}")
+            logger.debug(f"Using PRIMARY_KEY strategy: {strategy.description}")
             return strategy
         else:
             missing_pk_cols = [col for col in pk_columns if col not in available_columns]
@@ -90,7 +90,7 @@ def find_conflict_strategy(
             columns=unique_columns,
             description=f"Combined unique constraints conflict resolution on: {unique_columns}"
         )
-        logger.info(f"Using UNIQUE_COMBINED strategy: {strategy.description}")
+        logger.debug(f"Using UNIQUE_COMBINED strategy: {strategy.description}")
         return strategy
 
     # Strategy 3: Fallback to INSERT only
@@ -124,14 +124,14 @@ def deduplicate_temp_table(
     Raises:
         PgsqlUpserterError: If deduplication fails
     """
-    logger.info(f"Starting deduplication of '{temp_table_name}' on columns: {conflict_columns}")
+    logger.debug(f"Starting deduplication of '{temp_table_name}' on columns: {conflict_columns}")
 
     try:
         with connection.cursor() as cursor:
             # Get original count
             cursor.execute(f"SELECT COUNT(*) FROM {temp_table_name}")
             original_count = cursor.fetchone()[0]
-            logger.info(f"Original temp table count: {original_count} rows")
+            logger.debug(f"Original temp table count: {original_count} rows")
 
             if not conflict_columns:
                 # No deduplication needed for INSERT_ONLY strategy
@@ -223,10 +223,10 @@ def deduplicate_temp_table(
                 dropped_reasons=dropped_reasons
             )
 
-            logger.info(f"Deduplication completed: {original_count} → {deduplicated_count} rows "
-                        f"({total_dropped} dropped)")
+            logger.debug(f"Deduplication completed: {original_count} → {deduplicated_count} rows "
+                         f"({total_dropped} dropped)")
             for reason, count in dropped_reasons.items():
-                logger.info(f"  - {reason}: {count} rows")
+                logger.debug(f"  - {reason}: {count} rows")
 
             return result
 
@@ -260,8 +260,8 @@ def execute_upsert(
     Raises:
         PgsqlUpserterError: If upsert operation fails
     """
-    logger.info(f"Executing upsert from '{temp_table_name}' to '{schema_name}.{target_table}' "
-                f"using {conflict_strategy.type} strategy")
+    logger.debug(f"Executing upsert from '{temp_table_name}' to '{schema_name}.{target_table}' "
+                 f"using {conflict_strategy.type} strategy")
 
     try:
         with connection.cursor() as cursor:
@@ -277,7 +277,7 @@ def execute_upsert(
                 """)
 
                 rows_affected = cursor.rowcount
-                logger.info(f"INSERT_ONLY completed: {rows_affected} rows inserted")
+                logger.debug(f"INSERT_ONLY completed: {rows_affected} rows inserted")
                 return rows_affected, 0
 
             else:
@@ -310,7 +310,7 @@ def execute_upsert(
                 rows_inserted = after_count - before_count
                 rows_updated = temp_count - rows_inserted
 
-        logger.info(f"Upsert completed: {rows_inserted} inserted, {rows_updated} updated")
+        logger.debug(f"Upsert completed: {rows_inserted} inserted, {rows_updated} updated")
         return rows_inserted, rows_updated
 
     except Exception as e:

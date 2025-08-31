@@ -118,8 +118,8 @@ def inspect_table_schema(
             # Find primary key
             primary_key = next((uc for uc in unique_constraints if uc.is_primary), None)
 
-            logger.info(f"Successfully introspected table '{schema}.{table_name}' "
-                        f"with {len(columns)} columns and {len(unique_constraints)} constraints")
+            logger.debug(f"Successfully introspected table '{schema}.{table_name}' "
+                         f"with {len(columns)} columns and {len(unique_constraints)} constraints")
 
             return TableSchema(
                 table_name=table_name,
