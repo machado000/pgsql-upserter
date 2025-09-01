@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "pgsql-upserter"
-version = "0.9.1"
+version = "0.9.2"
 description = "PostgreSQL upsert engine using temp tables and automatic conflict resolution"
 authors = [
     {name = "Joao Brito"}
