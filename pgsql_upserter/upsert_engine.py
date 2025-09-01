@@ -145,6 +145,7 @@ def execute_upsert_workflow(
         temp_table_name=temp_table_name,
         data_list=data_list,
         matched_columns=matched_columns,
+        target_schema=target_schema,
         batch_size=batch_size
     )
     logger.info(f"Populated temp table with {rows_inserted} rows")

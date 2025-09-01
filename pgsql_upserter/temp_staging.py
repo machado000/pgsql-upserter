@@ -1,5 +1,6 @@
 """Temporary table management for PostgreSQL upsert operations."""
 
+import json
 import logging
 import uuid
 import psycopg2
@@ -23,6 +24,77 @@ def _normalize_null_values(value: Any) -> Any | None:
             return None
 
     return value
+
+
+def _convert_value_for_postgres(value: Any, column_data_type: str) -> Any | None:
+    """Convert Python values to PostgreSQL-compatible formats based on column data type.
+
+    Args:
+        value: The value to convert
+        column_data_type: PostgreSQL data type of the target column
+
+    Returns:
+        Converted value suitable for PostgreSQL insertion
+    """
+    # First apply null normalization
+    normalized_value = _normalize_null_values(value)
+    if normalized_value is None:
+        return None
+
+    # Convert based on PostgreSQL data type
+    column_type = column_data_type.lower()
+
+    try:
+        # Handle JSONB and JSON columns
+        if column_type in ('jsonb', 'json'):
+            if isinstance(normalized_value, (dict, list)):
+                return json.dumps(normalized_value)
+            elif isinstance(normalized_value, str):
+                # Try to parse as JSON, if it fails, treat as string literal
+                try:
+                    json.loads(normalized_value)
+                    return normalized_value  # Already valid JSON string
+                except json.JSONDecodeError:
+                    return json.dumps(normalized_value)  # Wrap non-JSON string in quotes
+            else:
+                return json.dumps(normalized_value)
+
+        # Handle PostgreSQL arrays (text[], integer[], etc.)
+        elif column_type.endswith('[]') or column_type.startswith('_'):
+            if isinstance(normalized_value, list):
+                # Convert Python list to PostgreSQL array format
+                # For text arrays, we need to escape quotes and handle null values
+                array_elements = []
+                for item in normalized_value:
+                    if item is None:
+                        array_elements.append('NULL')
+                    elif isinstance(item, str):
+                        # Escape quotes and wrap in quotes
+                        escaped = item.replace('"', '\\"')
+                        array_elements.append(f'"{escaped}"')
+                    else:
+                        array_elements.append(str(item))
+                return '{' + ','.join(array_elements) + '}'
+            elif isinstance(normalized_value, str):
+                # If it's already a string, assume it's in PostgreSQL array format
+                return normalized_value
+            else:
+                # Convert single value to single-element array
+                if isinstance(normalized_value, str):
+                    escaped = normalized_value.replace('"', '\\"')
+                    return '{' + f'"{escaped}"' + '}'
+                else:
+                    return '{' + str(normalized_value) + '}'
+
+        # For all other types, return the normalized value as-is
+        # PostgreSQL driver will handle the conversion
+        else:
+            return normalized_value
+
+    except Exception as e:
+        logger.warning(f"Failed to convert value {repr(value)} for column type {column_data_type}: {e}")
+        # Fallback: convert to string
+        return str(normalized_value) if normalized_value is not None else None
 
 
 def create_temp_table(connection, target_table: str, schema: str = 'public') -> str:
@@ -95,6 +167,7 @@ def bulk_insert_to_temp(
     temp_table_name: str,
     data_list: list[dict[str, Any]],
     matched_columns: list[str],
+    target_schema=None,
     batch_size: int = 1000,
     show_progress: bool = True
 ) -> int:
@@ -105,6 +178,8 @@ def bulk_insert_to_temp(
         temp_table_name: Name of the temporary table
         data_list: List of dictionaries containing data to insert
         matched_columns: List of column names to include in insert
+        target_schema: TableSchema object for data type conversion (optional)
+        batch_size: Number of rows to process in each batch
         show_progress: Whether to show progress for large datasets
 
     Returns:
@@ -120,6 +195,13 @@ def bulk_insert_to_temp(
     if show_progress and total_rows > batch_size:
         logger.info(f"Processing {total_rows} rows...")
 
+    # Build column data type mapping for proper conversion
+    column_type_map = {}
+    if target_schema:
+        for col_info in target_schema.columns:
+            if col_info.name in matched_columns:
+                column_type_map[col_info.name] = col_info.data_type
+
     try:
         with connection.cursor(cursor_factory=RealDictCursor) as cursor:
             # Filter and normalize data with progress tracking
@@ -128,8 +210,14 @@ def bulk_insert_to_temp(
                 filtered_row = []
                 for col in matched_columns:
                     value = row.get(col)  # Missing keys become None
-                    normalized_value = _normalize_null_values(value)
-                    filtered_row.append(normalized_value)
+
+                    # Convert value based on column data type if available
+                    if col in column_type_map:
+                        converted_value = _convert_value_for_postgres(value, column_type_map[col])
+                    else:
+                        converted_value = _normalize_null_values(value)
+
+                    filtered_row.append(converted_value)
                 filtered_data.append(filtered_row)
 
                 # Show progress every batch_size rows

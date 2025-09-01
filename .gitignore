@@ -216,6 +216,7 @@ __marimo__/
 .streamlit/secrets.toml
 
 # User custom ignores
+/.github
 /examples
 /tests
 *.csv
